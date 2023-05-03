@@ -1,0 +1,211 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+#first task is to look at the various response curves and see how they change with GI
+#It should be possible to find a functional form of a response curve that only depends on GI and time?
+const = pd.read_excel(r'C:\Users\buddy\Downloads\1-s2.0-S2352939317300374-mmc2.xlsx')
+
+k1_list = []
+k2_list = []
+k13_list = []
+sigma_list = []
+carb_list = []
+
+for i in range(52):
+    k1_list.append(const.iloc[i][2])
+    k2_list.append(const.iloc[i][3])
+    k13_list.append(const.iloc[i][4])
+    sigma_list.append(const.iloc[i][5])
+    carb_list.append(const.iloc[i][6])
+
+print(k1_list)
+
+def f_G(a, k1, sigma, t):
+    return a * np.exp(-(k1*t)**sigma)
+
+t = np.linspace(0,10,100)
+a = 1
+k1 = 0.1
+sigma = 2
+
+y = f_G(a, k1, sigma, t)
+plt.plot(t,y, '--')
+
+
+def M_out(D_meal,k1, sigma, t):
+    return D_meal * np.exp(-(k1*t)**sigma)
+   
+def M_in(D_meal,k1, sigma, t):
+    return D_meal * (1 - np.exp(-(k1*t)**sigma))
+
+t = np.linspace(0,20,100)
+a = 1
+k1 = 0.1
+sigma = 2
+D_meal = 75
+
+y = M_in(D_meal, k1, sigma, t)
+y2 = M_out(D_meal, k1, sigma, t)
+
+plt.plot(t,y, '--')
+plt.plot(t,y2, '--')
+
+def m_G(D_meal,k1, sigma, t):
+    return sigma * k1**sigma * t**(sigma-1) * D_meal * np.exp(-(k1*t)**sigma)
+
+t = np.linspace(0,20,100)
+a = 1
+k1 = 0.1
+sigma = 2
+D_meal = 75
+
+y = m_G(D_meal, k1, sigma, t)
+
+plt.plot(t,y, '--')
+
+def m_G(D_meal,k1,k13, sigma, t):
+    return sigma * k1**sigma * t**(sigma-1) * D_meal * np.exp(-(k1*t)**sigma)*np.exp(-(k13*t))
+
+t = np.linspace(0,120,100)
+a = 1
+k1 = 0.01
+k13 = 0.1
+sigma = 2
+D_meal = 75
+
+y = m_G(D_meal, k1, k13, sigma, t)
+
+plt.plot(t,y, '--')
+
+#Definition of all parameters used in this study, four a fitable it seems?
+k1 = 1.45e-2 #taken from original study, here fitable 
+k2 = 2.76e-1 #taken from original study, here fitable 
+k3 = 6.07e-3
+k4 = 2.35e-4
+k5 = 9.49e-2
+k6 = 1.93e-1
+k7 = 1.15
+k8 = 7.27
+k9 = 0
+k10 = 0
+k11 = 3.83e-2
+k12 = 2.84e-1
+k13 = 0 #fitable - new parameter!
+sigma = 1.34 #taken from original study, here fitable 
+K_M = 13.2 #very different from orginial study, there 2.36e2
+
+#Getting all the relevant equations put together
+
+def M_G_gut(D_meal,k1, sigma, t):
+    return D_meal * np.exp(-(k1*t)**sigma)
+
+def m_G_gut(D_meal,k1,k13, sigma, t):
+    return sigma * k1**sigma * t**(sigma-1) * D_meal * np.exp(-(k1*t)**sigma)*np.exp(-(k13*t))
+
+def m_G_pl(k2, D_meal,k1, sigma, t):
+    return k2 * D_meal * np.exp(-(k1*t)**sigma)
+
+#this requires extra constants from https://journals.sagepub.com/doi/10.1177/1932296814562607
+
+#the model consists of two coupled Differential Equations for Glucose and Insulin in the plasma. 
+#given the parameters, one needs to solve the system of equations using a solver. 
+# 
+def I_rem(i_pl, i_it):
+    return i_pl - i_it
+def g_liv(t, g_b_liv, k3, G_pl, G_b_pl, k4, beta):
+    return g_b_liv - (k3 * (G_pl - G_b_pl)) - (k4 * beta * I_rem)
+def g_gut(t, f, v_G, M_b, m_G_pl):
+    return (f / v_G * M_b) * m_G_pl
+def g_non_it(g_b_liv, K_M, G_b_pl, G_pl):
+    return g_b_liv * ((K_M + G_b_pl) / G_b_pl) * (G_pl / (K_M + G_pl))
+def g_it(k5, beta, I_rem, G_pl, K_M):
+    return (k5 * beta * I_rem) * (G_pl / (K_M + G_pl))
+def g_ren(c1, v_G, M_b, G_pl, G_pl_th):
+    if G_pl > G_pl_th:
+        return (c1 / v_G * M_b)(G_pl - G_th_pl)
+    return 0
+def G_pl(t, M_G_gut, G_pl):
+    return g_liv * (G_pl, I_rem) - g_gut(M_G_gut) - g_non_it(G_pl) - g_it(G_pl, I_rem) - g_ren(G_pl) #TODO: Needs to be fixed!
+
+def i_pnc(beta, k6, G_pl, G_b_pl, k7, tau_i, t, t_int, k8, tau_d):
+    return (1/beta)*(k6 *(G_pl - G_b_pl) + (k7/tau_i)*(1) (k7/tau_i)*(G_b_pl) + (k8 * tau_d)*(G_pl))
+def i_sa(k9, v1, M_b, U_sc2_I):
+    return k9 * (1 / (v1 * M_b)) * U_sc2_I
+def U_sc1_I(u_sa, k10, U, t):
+    return u_sa - k10*U
+def U_sc2_I(k10, U, k9, t):
+    return k10*U - k9*U
+def i_la(h, v1, M_b, U_la):
+    return (((h * (t_half)**h) * t**(h-1)) / ((t_half**h) + t**h)**2) * (1 / v1 * M_b) * U_la
+def t_half(a, U_la, b):
+    return (a * U_la) + b
+def i_liv(k7, G_b_pl, beta, tau_i, I_b_pl, I_pl):
+    return k7 * (G_b_pl / (beta * tau_i * I_b_pl)) * I_pl
+def i_rem(k11, I_pl, I_b_pl):
+    return k11 * (I_pl - I_b_pl)
+def I_pl(t, i_pnc, G_pl, i_sa, U_sc1_I, U_sc2_I, i_la, U_la, i_liv, I_pl, i_rem):
+    return i_pnc * (G_pl + i_sa(U_sc1_I, U_sc2_I) + i_la(U_la, t) - i_liv(I_pl) - i_rem(I_pl)) #TODO: Needs to be fixed!
+G_b_pl = G_pl(0)
+I_b_pl = I_pl(0)
+g_b_liv = 0.043
+G_th_pl = 9
+v_G = 17/70
+v_i = 13/70
+beta = 1
+f = 0.005551
+tau_i = 31
+t_int = 30
+tau_d = 3
+c1 = 0.1
+
+
+def g_liv(t):
+    return g_b_liv - k3 * (G_pl(t))
+
+import scipy
+
+#matlab ode15s can be solved with scipy equivalent
+
+#here is a great tutorial on how to solve the ODEs: https://danielmuellerkomorowska.com/2021/02/16/differential-equations-with-scipy-odeint-or-solve_ivp/
+
+#example of how it can be integrated!
+import numpy as np
+from scipy.integrate import odeint, solve_ivp
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+ 
+def lorenz(t, state, sigma, beta, rho):
+    x, y, z = state
+     
+    dx = sigma * (y - x)
+    dy = x * (rho - z) - y
+    dz = x * y - beta * z
+     
+    return [dx, dy, dz]
+ 
+sigma = 10.0
+beta = 8.0 / 3.0
+rho = 28.0
+ 
+p = (sigma, beta, rho)  # Parameters of the system
+ 
+y0 = [1.0, 1.0, 1.0]  # Initial state of the system
+
+t_span = (0.0, 40.0)
+t = np.arange(0.0, 40.0, 0.01)
+ 
+result_odeint = odeint(lorenz, y0, t, p, tfirst=True)
+result_solve_ivp = solve_ivp(lorenz, t_span, y0, args=p)
+ 
+fig = plt.figure()
+ax = fig.add_subplot(1, 2, 1, projection='3d')
+ax.plot(result_odeint[:, 0],
+        result_odeint[:, 1],
+        result_odeint[:, 2])
+ax.set_title("odeint")
+ 
+ax = fig.add_subplot(1, 2, 2, projection='3d')
+ax.plot(result_solve_ivp.y[0, :],
+        result_solve_ivp.y[1, :],
+        result_solve_ivp.y[2, :])
+ax.set_title("solve_ivp")
