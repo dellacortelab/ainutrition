@@ -1,0 +1,26 @@
+dMGgut/dt = mGmeal*(Dmeal,t) - mGpl(MGgut(t))
+mGmeal(t) = σ*k1^(σ) * t^(σ−1) * exp(-(k1t)^(σ))*Dmeal
+mGpl(t) = k2 * MGgut(t)
+
+dGpl/dt = gliv*(Gpl(t), Irem(t)) + ggut*(MGgut(t)) - gnonit*(Gpl(t)) - git*(Gpl(t), Irem(t)) - gren*(Gpl(t))
+gliv(t) = gbliv - k3*(Gpl(t)−Gbpl) - k4*β*Irem(t)
+ggut(t) = (f / (νG*Mb)) * mGpl(t) = k2 * (f / (νG*Mb)) * MGgut(t)
+gnonit(t) = gbliv*((KM + Gbpl)/ Gbpl)*(Gpl(t) / (KM + Gpl(t)))
+git(t) = k5*β*Irem(t)*(Gpl(t) / (KM + Gpl(t)))
+gren(t) = ⎨(c1/(νG*Mb))*(Gpl(t) - Gthpl) #if# Gpl(t) > Gthpl 0,  #if# Gpl(t) ≤ Gthpl
+
+dIpl/dt = ipnc*(Gpl(t)) + isa*(Usc1(t), Usc2(t)) + ila*(Ula,t) - iliv*(Ipl(t)) - irem*(Ipl(t))
+ipnc(t) =(β^(-1))*(k6*(Gpl(t) - Gbpl) + (k7/τi)*∫#from "t" to "t_int"# (Gpl(t) - Gbpl)dt  + (k7/τi)*Gbpl + (k8*τd)*(dGpl/dt))
+isa(t) = k9*(1/(vI*Mb)*Usc2I(t)
+dUsc1/dt = usa(t) - k10*Usc1(t) 
+dUsc2/dt = k10*Usc1(t) - k9*Usc2(t)
+ila(t) = ((h*(t_half)^(h) * t^(h−1)) / (((t_half)^(h) + t^(h))^(2))) * ((1 / (vI*Mb)) * Ula
+t_half = a*Ula(t) + b
+iliv(t) = k7*(Gbpl / (β*τi*Ibpl)) * Ipl(t)
+irem(t) = k11*(Ipl(t) - Ibpl)
+
+dIrem/dt = ipl*(Ipl(t)) - iit*(Irem(t))
+ipl(t) = irem(t) = k11*(Ipl(t) - Ibpl)
+iit(t) = k12*Irem(t)
+
+
