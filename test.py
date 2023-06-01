@@ -1,3 +1,1 @@
-
-def print_hello():
-    return "Hello World"
+print ('hello world')
